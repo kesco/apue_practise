@@ -9,5 +9,6 @@ set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=c99")
 
+add_subdirectory(adk)
 add_subdirectory(thread)
 
