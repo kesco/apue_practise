@@ -19,5 +19,7 @@ if("${isSystemDir}" STREQUAL "-1")
   set(CMAKE_INSTALL_RPATH "${INSTALL_LIB_DIR}")
 endif("${isSystemDir}" STREQUAL "-1")
 
+# add_definitions(-DNO_DEBUG)
+
 add_subdirectory(adk)
 add_subdirectory(thread)
