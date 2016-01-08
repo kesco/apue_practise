@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.3)
 
 project(apue_practise)
 
+# 默认构建方式为Debug
 set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --std=c99")
