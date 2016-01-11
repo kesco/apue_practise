@@ -1,24 +1,16 @@
 #ifndef __ADK_THREAD_H__
 #define __ADK_THREAD_H__
 
-#include <pthread.h>
+typedef struct thread_pool_t thread_pool_t;
 
-#ifndef __ADK_BASE_H__
-#include <stdint.h>
-#endif
-
-typedef struct thread_pool_t
-{
-  pthread_t *thread;
-  pthread_cond_t *cond;
-
-  uint32_t capacity;
-} thread_pool_t;
-
-enum thread_pool_state
+typedef enum 
 {
   RUNNING = 0,
   HALT = -1
-};
+} thread_pool_state;
+
+thread_pool_t *thread_pool_create(int thread_size, int queue_count);
+int thread_pool_add_task(void (*task)(void *), void *args);
+int thread_pool_destroy(thread_pool_t *pool);
 
 #endif /* __ADK_THREAD_H__ */

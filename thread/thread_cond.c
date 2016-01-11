@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include "adk/base.h"
 #include "adk/debug.h"
 #include "adk/thread.h"
@@ -9,15 +10,25 @@ static uint8_t token = 0;
 
 void *swith_push(void *args)
 {
+  if (args)
+  {
+    /* Ignore Arguments. */
+  }
   static uint32_t count = 0;
+  pthread_t tid = pthread_self();
   for (;;)
   {
     if (!pthread_mutex_lock(mutex))
     {
+      if (count == 9)
+      {
+        pthread_mutex_unlock(mutex);
+        break;
+      }
       pthread_cond_wait(cond, mutex);
       if (token)
       {
-        log_info("Push %d times.", count++);
+        log_info("(Thread ID %u) push %d times.", (unsigned int)tid, count++);
         token--;
       }
       pthread_mutex_unlock(mutex);
@@ -36,14 +47,24 @@ void *swith_push(void *args)
 
 void *switch_pop(void *args)
 {
+  if (args)
+  {
+    /* Ignore Arguments. */
+  }
   static uint32_t count = 0;
+  pthread_t tid = pthread_self();
   for (;;)
   {
     if (!pthread_mutex_lock(mutex))
     {
+      if (count == 10)
+      {
+        pthread_mutex_unlock(mutex);
+        break;
+      }
       if (!token)
       {
-        log_info("Pop %d times.", count++);
+        log_info("(Thread ID %u) pop %d times.", (unsigned int)tid, count++);
         token++;
       }
       pthread_cond_signal(cond);
@@ -83,7 +104,20 @@ int main(void)
   pthread_join(thread_0, NULL);
   pthread_join(thread_1, NULL);
 
-  free(cond);
-  free(mutex);
+  pthread_mutex_lock(mutex);
+  pthread_mutex_destroy(mutex);
+  if (mutex != NULL)
+  {
+    log_info("Mutex ptr exits. Destroy it.");
+    free(mutex);
+  }
+
+  pthread_cond_destroy(cond);
+  if (cond != NULL)
+  {
+    log_info("Cond ptr exits. Destroy it.");
+    free(cond);
+  }
+
   return 0;
 }
