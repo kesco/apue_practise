@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -26,6 +27,46 @@ struct thread_pool_t
 
 static void *pool_thread(void *);
 
+static inline void pool_queue_init(thread_pool_t *pool, int queue_count)
+{
+  pool->queue = (thread_pool_task_t *) malloc(sizeof(thread_pool_task_t) * queue_count);
+  pool->capacity = queue_count;
+  pool->head = -1;
+  pool->tail = -1;
+}
+
+static inline bool pool_queue_is_empty(thread_pool_t *pool)
+{
+  return pool->head == pool->tail;
+}
+
+static inline bool pool_queue_is_full(thread_pool_t *pool)
+{
+  return (pool->tail - pool->capacity) == pool->head;
+}
+
+static inline void pool_queue_cleanup(thread_pool_t *pool)
+{
+  pool->head = -1;
+  pool->tail = -1;
+}
+
+static inline bool pool_queue_enqueue(thread_pool_t *pool, void (*task)(void *), void *args )
+{
+  if (pool_queue_is_full(pool)) return false;
+  pool->tail += 1;
+  pool->queue[pool->tail % pool->capacity].task = task;
+  pool->queue[pool->tail % pool->capacity].args = args;
+  return true;
+}
+
+static inline thread_pool_task_t *pool_queue_dequeue(thread_pool_t *pool)
+{
+  if (pool_queue_is_empty(pool)) return NULL;
+  pool->head += 1;
+  return &(pool->queue[pool->head % pool->capacity]);
+}
+
 thread_pool_t *thread_pool_create(int thread_size, int queue_count)
 {
   if (thread_size < 1 || queue_count < 1) return NULL;
@@ -34,11 +75,8 @@ thread_pool_t *thread_pool_create(int thread_size, int queue_count)
   pool->mutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
   pool->cond = (pthread_cond_t *)malloc(sizeof(pthread_cond_t));
   pool->threads = (pthread_t *)malloc(sizeof(pthread_t) * thread_size);
-  pool->queue = (thread_pool_task_t *)malloc(sizeof(thread_pool_task_t) * queue_count);
   pool->size = 0;
-  pool->capacity = queue_count;
-  pool->head = 0;
-  pool->tail = 0;
+  pool_queue_init(pool, queue_count);
 
   check(!pthread_mutex_init(pool->mutex, NULL)
         && !pthread_cond_init(pool->cond, NULL)
@@ -60,10 +98,9 @@ error:
   return NULL;
 }
 
-int thread_pool_add_task(void (*task)(void *), void *args)
+int thread_pool_add_task(thread_pool_t *pool, void (*task)(void *), void *args)
 {
   if (task == NULL && args == NULL) return EINVAL;
-
   return 0;
 }
 
