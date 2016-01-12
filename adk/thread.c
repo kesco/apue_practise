@@ -84,14 +84,13 @@ thread_pool_t *thread_pool_create(int thread_size, int queue_count)
         && pool->queue != NULL,
         "Thread Pool Initiallization is failed.");
 
+  pool->state = RUNNING;
   for (int i = 0; i < thread_size; i += 1)
   {
-    check(!pthread_create(pool->threads + i, NULL, pool_thread, NULL)
+    check(!pthread_create(pool->threads + i, NULL, pool_thread, pool)
           , "Can not create a thread in the thread pool.");
     pool->size++;
   }
-
-  pool->state = RUNNING;
   return pool;
 error:
   if (pool != NULL) thread_pool_destroy(pool);
@@ -101,36 +100,66 @@ error:
 int thread_pool_add_task(thread_pool_t *pool, void (*task)(void *), void *args)
 {
   if (task == NULL && args == NULL) return EINVAL;
-  return 0;
+  int ret;
+  do
+  {
+    ret = pthread_mutex_lock(pool->mutex);
+    if (ret != 0) break;
+    pool_queue_enqueue(pool, task, args);
+    pthread_cond_signal(pool->cond);
+    ret = pthread_mutex_unlock(pool->mutex);
+  }
+  while (0);
+  return ret;
 }
 
 int thread_pool_destroy(thread_pool_t *pool)
 {
-  if (pool == NULL) return -1;
-  /* 删除互斥锁和条件变量 */
-  pthread_mutex_lock(pool->mutex);
-  pthread_cond_destroy(pool->cond);
-  pthread_mutex_destroy(pool->mutex);
+  int ret = 0;
+  do
+  {
+    if (pool == NULL)
+    {
+      ret = -1;
+      break;
+    }
+    if (pthread_mutex_lock(pool->mutex) != 0)
+    {
+      ret = -1;
+      break;
+    }
+    pool->state = HALT;
+    pool_queue_cleanup(pool);
+    /* 删除互斥锁和条件变量 */
+    pthread_cond_destroy(pool->cond);
+    pthread_mutex_destroy(pool->mutex);
 
-  free(pool->mutex);
-  free(pool->cond);
-  free(pool->threads);
-  free(pool);
-  return 0;
+    free(pool->mutex);
+    free(pool->cond);
+    free(pool->queue);
+    free(pool->threads);
+    free(pool);
+  }
+  while (0);
+  return ret;
 }
 
 static void *pool_thread(void *thread_pool)
 {
   thread_pool_t *pool = (thread_pool_t *)thread_pool;
-  thread_pool_task_t task;
-  if (pool == NULL)
+  thread_pool_task_t *task;
+  do
   {
-    /* Empty. */
+    if (pool == NULL || pool->state == HALT) break;
+    if (pthread_mutex_lock(pool->mutex) == 0)
+    {
+      if (pool_queue_is_empty(pool)) pthread_cond_wait(pool->cond, pool->mutex);
+      task = pool_queue_dequeue(pool);
+      pthread_mutex_unlock(pool->mutex);
+      if (task != NULL) (*(task->task))(task->args);
+    }
   }
-
-  for (;;)
-  {
-  }
+  while (1);
 
   pthread_exit(NULL);
   return NULL;
