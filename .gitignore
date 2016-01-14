@@ -34,4 +34,8 @@
 # YouCompleteMe Files
 .ycm_extra_conf.pyc
 
+# Build Template Directory
 build/
+
+# Mac File System Cache
+.DS_Store

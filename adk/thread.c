@@ -29,7 +29,7 @@ static void *pool_thread(void *);
 
 static inline void pool_queue_init(thread_pool_t *pool, int queue_count)
 {
-  pool->queue = (thread_pool_task_t *) malloc(sizeof(thread_pool_task_t) * queue_count);
+  pool->queue =(thread_pool_task_t *) malloc(sizeof(thread_pool_task_t) * queue_count);
   pool->capacity = queue_count;
   pool->head = -1;
   pool->tail = -1;

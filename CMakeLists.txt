@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.3)
 
 project(apue_practise)
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
 # 默认构建方式为Debug
 set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall")
@@ -21,6 +19,8 @@ list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES ${CMAKE_INSTALL_RPATH} isSyst
 if("${isSystemDir}" STREQUAL "-1")
   set(CMAKE_INSTALL_RPATH "${INSTALL_LIB_DIR}")
 endif("${isSystemDir}" STREQUAL "-1")
+
+enable_testing()
 
 # add_definitions(-DNO_DEBUG)
 
